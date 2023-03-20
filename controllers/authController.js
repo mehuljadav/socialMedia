@@ -1,3 +1,4 @@
+const { promisify } = require('util');
 const User = require('../models/userModel');
 const catchAsync = require('../utils/catchAsync');
 const appError = require('../utils/appError');
@@ -15,13 +16,13 @@ const createWebToken = async (user, statusCode, req, res) => {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
   // 2 Sending Token via cookie
-  res.cookie('jwt', token, {
+  res.cookie('token', token, {
     expires: new Date(
       Date.now() + process.env.COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
     ),
     httpOnly: true,
   });
-
+  user.password = undefined;
   console.log(token);
   res.status(statusCode).json({
     status: 'success',
@@ -50,11 +51,51 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!email || !password) {
     return next(new appError('Please provide Email and Password!', 401));
   }
-  const user = await User.findOne({ email }).select('password');
+  const user = await User.findOne({ email }).select('+password');
 
   if (!user || !(await user.comparePassword(password, user.password)))
     return next(new appError('Username or Password are wrong!', 401));
 
   createWebToken(user, 201, req, res);
+  next();
+});
+
+exports.logout = catchAsync(async (req, res, next) => {
+  res
+    .cookie('token', 'loggedout', {
+      expires: new Date(Date.now()),
+      httpOnly: true,
+    })
+    .status(200)
+    .json({
+      status: 'success',
+      data: 'Logout successful!',
+    });
+});
+
+exports.protect = catchAsync(async (req, res, next) => {
+  let token = req.cookies.token;
+  if (!token) {
+    return next(new appError('You are not allowed to access this route.', 401));
+  }
+
+  const decodedUser = await promisify(jwt.verify)(
+    token,
+    process.env.JWT_SECRET
+  );
+  if (!decodedUser) {
+    return next(
+      new appError('User Authentication failed, Please login again.', 401)
+    );
+  }
+
+  const frashUser = await User.findById(decodedUser.id);
+  if (!frashUser) {
+    return next(
+      new appError('User not found with this token,  Please login again.', 401)
+    );
+  }
+
+  req.user = frashUser;
   next();
 });
