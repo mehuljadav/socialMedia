@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -15,8 +16,10 @@ const userSchema = new mongoose.Schema({
     trime: true,
   },
   avatar: {
-    public_id: String,
-    url: String,
+    // public_id: String,
+    // url: String,
+    type: String,
+    default: 'default.jpg',
   },
   password: {
     type: String,
@@ -24,28 +27,63 @@ const userSchema = new mongoose.Schema({
     required: [true, 'User must provide Password!'],
     select: false,
   },
-  passwordconfirm: {
+  passwordConfirm: {
     type: String,
-    required: [true, 'User must provide Password!'],
+    validate: {
+      validator: async function (pc) {
+        return pc === this.password;
+      },
+      message: `Passwords doesn't match!`,
+    },
   },
   posts: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: Post,
+      ref: 'Post',
     },
   ],
   followers: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: User,
+      ref: 'User',
     },
   ],
   following: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: User,
+      ref: 'User',
     },
   ],
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
+  },
 });
+
+//
+//
+//  Password bcryption
+//
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+
+  // Delete passwordConfirm field
+  this.passwordConfirm = undefined;
+  next();
+});
+
+//
+//
+// Compare Password
+//
+userSchema.methods.comparePassword = async function (
+  candidatePassword,
+  userPassword
+) {
+  console.log(candidatePassword, userPassword);
+  return await bcrypt.compare(candidatePassword, userPassword);
+};
 
 module.exports = mongoose.model('User', userSchema);

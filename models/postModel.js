@@ -10,24 +10,21 @@ const postSchema = new mongoose.Schema({
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: User,
+    ref: 'User',
   },
-  createdAt: {
-    type: Date,
-    default: Date.now(),
-  },
+
   // multiple user gooing to likes so it will be array
   likes: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: user,
+      ref: 'User',
     },
   ],
   comments: [
     {
       user: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: User,
+        ref: 'User',
       },
       Comment: {
         type: String,
@@ -35,6 +32,10 @@ const postSchema = new mongoose.Schema({
       },
     },
   ],
+  createdAt: {
+    type: Date,
+    default: Date.now(),
+  },
 });
 
 module.exports = mongoose.model('Post', postSchema);
