@@ -8,14 +8,17 @@ const authController = require('../controllers/authController');
 // Routes
 //
 
-router.post('/post', authController.protect, postController.createPost);
-router.get(
-  '/post/:id',
-  authController.protect,
-  postController.likeAndUnlikePost
-);
-// router.post('/post/:id', authController.protect, postController.followUnfollow);
+router.post('/', authController.protect, postController.createPost);
+router.get('/:id', authController.protect, postController.likeAndUnlikePost);
 
-router.delete('/post/:id', authController.protect, postController.deletePost);
+//
+// Get All Posts of Following User
+//
+router.get('/', authController.protect, postController.getPostOfFollowing);
+
+//
+// Delete Post
+//
+router.delete('/:id', authController.protect, postController.deletePost);
 
 module.exports = router;

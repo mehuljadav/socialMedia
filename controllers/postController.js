@@ -21,7 +21,7 @@ exports.createPost = catchAsync(async (req, res, next) => {
     return next(new AppError('Please login to create Post!', 401));
   }
 
-  user.posts.push(post._id);
+  user.posts.push(post);
   await user.save();
 
   res.status(201).json({
@@ -85,8 +85,62 @@ exports.likeAndUnlikePost = catchAsync(async (req, res, next) => {
   }
 });
 
-// exports.followUnfollow = catchAsync(async (req, res, next) => {
-// const loggedInUser = await User.findById(req.user.id);
-// const userToFollow = await User.
+exports.followUnfollow = catchAsync(async (req, res, next) => {
+  const loggedInUser = await User.findById(req.user.id);
+  const userToFollow = await User.findById(req.params.id);
 
-// });
+  if (!loggedInUser) {
+    return next(new AppError('Please login to follow users!', 401));
+  }
+  if (!userToFollow) {
+    return next(new AppError('User you trying to follow does not exist!', 401));
+  }
+
+  if (loggedInUser.following.includes(userToFollow.id)) {
+    //
+    // means loggedIn user is following
+
+    const indexFolloing = loggedInUser.following.indexOf(loggedInUser.id);
+    loggedInUser.following.splice(indexFolloing, 1);
+
+    const indexFollower = userToFollow.followers.indexOf(loggedInUser.id);
+    userToFollow.followers.splice(indexFollower, 1);
+
+    await loggedInUser.save();
+    await userToFollow.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'User Unfollowed',
+    });
+  } else {
+    console.log('Gopal id', userToFollow.id, 'mj id', loggedInUser.id);
+    loggedInUser.following.push(userToFollow.id);
+    userToFollow.followers.push(loggedInUser.id);
+
+    await loggedInUser.save();
+    await userToFollow.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'User Followed',
+    });
+  }
+});
+
+// Task : get all post of following user
+exports.getPostOfFollowing = catchAsync(async (req, res, next) => {
+  const user = await User.findById(req.user.id);
+  if (!user) return next(new AppError('User not found!', 401));
+
+  const posts = await Post.find({
+    owner: {
+      $in: user.following,
+    },
+  });
+
+  res.status(200).json({
+    status: 'success',
+    data: posts,
+  });
+});
