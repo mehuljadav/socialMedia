@@ -10,7 +10,7 @@ require('dotenv').config({ path: 'config/config.env' });
 // Signup User
 //
 
-const createWebToken = async (user, statusCode, req, res) => {
+const createWebToken = async (user, statusCode, req, res, msg) => {
   // 1 Creating Token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -23,10 +23,11 @@ const createWebToken = async (user, statusCode, req, res) => {
     httpOnly: true,
   });
   user.password = undefined;
-  console.log(token);
+  console.log(msg);
   res.status(statusCode).json({
     status: 'success',
     token,
+    msg,
     data: user,
   });
 };
@@ -51,11 +52,17 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!email || !password) {
     return next(new appError('Please provide Email and Password!', 401));
   }
-  const user = await User.findOne({ email }).select('+password');
-
+  const user = await User.findOne({ email }).select('+password +active');
+  console.log(user);
   if (!user || !(await user.comparePassword(password, user.password)))
     return next(new appError('Username or Password are wrong!', 401));
-
+  if (user.active === false) {
+    user.active = true;
+    await user.save();
+    const msg = 'welcome back';
+    createWebToken(user, 201, req, res, msg);
+    console.log('way from here');
+  }
   user.active = true;
   await user.save();
 

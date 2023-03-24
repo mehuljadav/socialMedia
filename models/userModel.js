@@ -104,6 +104,7 @@ userSchema.pre(/^find/, async function (next) {
   if (this.op === 'find') {
     this.find({ active: { $ne: false } });
   }
+
   next();
 });
 
