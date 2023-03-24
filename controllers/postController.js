@@ -144,3 +144,24 @@ exports.getPostOfFollowing = catchAsync(async (req, res, next) => {
     data: posts,
   });
 });
+
+exports.updatePostCaption = catchAsync(async (req, res, next) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) {
+    return next(new AppError('Post not found!', 401));
+  }
+  console.log(post);
+  if (post.owner.toString() === req.user.id) {
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      { caption: req.body.caption },
+      { new: true, runValidators: true }
+    );
+    return res.status(200).json({
+      status: 'success',
+      data: updatedPost,
+    });
+  } else {
+    return next(new AppError('You are not authorized to edit this post', 401));
+  }
+});

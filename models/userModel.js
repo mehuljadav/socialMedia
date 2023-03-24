@@ -1,12 +1,20 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcryptjs');
+const { find } = require('./postModel');
 
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'User must have a name!'],
     trime: true,
+    maxlength: [20, 'Name should smaller then 20 Character'],
+    validate: {
+      validator: function (v) {
+        return validator.isAlpha(v, 'en-US', { ignore: ' ' });
+      },
+      message: `Name should conains only valid alphabates!`,
+    },
   },
   email: {
     type: String,
@@ -14,6 +22,7 @@ const userSchema = new mongoose.Schema({
     validate: [validator.isEmail, 'incorrect Email Address!'],
     unique: true,
     trime: true,
+    lowercase: true,
   },
   avatar: {
     // public_id: String,
@@ -59,6 +68,11 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  active: {
+    type: Boolean,
+    default: true,
+    select: false,
+  },
 });
 
 //
@@ -82,8 +96,15 @@ userSchema.methods.comparePassword = async function (
   candidatePassword,
   userPassword
 ) {
-  console.log(candidatePassword, userPassword);
+  //console.log(candidatePassword, userPassword);
   return await bcrypt.compare(candidatePassword, userPassword);
 };
+
+userSchema.pre(/^find/, async function (next) {
+  if (this.op === 'find') {
+    this.find({ active: { $ne: false } });
+  }
+  next();
+});
 
 module.exports = mongoose.model('User', userSchema);

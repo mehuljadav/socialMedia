@@ -56,6 +56,9 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!user || !(await user.comparePassword(password, user.password)))
     return next(new appError('Username or Password are wrong!', 401));
 
+  user.active = true;
+  await user.save();
+
   createWebToken(user, 201, req, res);
   next();
 });
